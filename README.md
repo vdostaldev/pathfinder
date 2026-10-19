@@ -1,27 +1,23 @@
-# Pathfinder
+# Pathfinding Visualizer
 
-An interactive pathfinding visualizer in a single HTML file: no build step, no dependencies.
+A small web page that shows how different pathfinding algorithms search a grid.
 
-Open `index.html` in a browser.
+Open `index.html` in a browser. No install needed.
 
 ## Algorithms
 
-| Algorithm | Uses weights | Finds the cheapest path |
-|---|---|---|
-| A* (Manhattan heuristic) | yes | yes |
-| Dijkstra | yes | yes |
-| Greedy best-first | no (only distance to the target) | no |
-| Breadth-first | no | fewest steps only |
-| Depth-first | no | no |
+- BFS (breadth-first search)
+- DFS (depth-first search)
+- Dijkstra
+- A* (Manhattan distance heuristic)
+- Greedy best-first search
 
-Each algorithm is a generator that yields `visit` and `frontier` events. That lets the same code run either animated, one step per frame, or instantly to the end.
+## How to use
 
-## Using it
+- Click and drag on the grid to draw walls, or weights (cost 5) if Draw is set to Weights.
+- Drag the green square (start) and the red square (end) to move them.
+- Press **Visualize** to watch the search step by step.
+- **Generate maze** makes a random maze.
+- After a search finishes, moving start/end or changing the algorithm updates the result right away.
 
-- **Draw**: drag on the grid with the Wall, Weight (costs ×5) or Erase brush.
-- **Move start and end**: drag the green ● or the red ◎.
-- **Live mode**: after a run finishes, editing the board, moving a marker or switching algorithm recomputes the result instantly.
-- **Generate**: Maze is a recursive backtracker with some walls knocked out so there are loops. Scatter places random walls and weights.
-- **Keys**: `Space` run/stop · `M` maze · `S` scatter · `C` clear.
-
-Explored cells are colored from violet (visited first) to teal (visited last), so you can see how each algorithm spreads.
+Light blue cells are the frontier (cells waiting to be explored), darker blue cells have been visited, and yellow is the final path.

@@ -1,849 +1,513 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pathfinder</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<title>Pathfinding Visualizer</title>
 <style>
-  :root {
-    color-scheme: dark;
-    --bg: #07080c;
-    --panel: rgba(17, 20, 28, 0.72);
-    --panel-solid: #11141c;
-    --border: rgba(255, 255, 255, 0.07);
-    --text: #e8eaf0;
-    --muted: #8b93a7;
-    --canvas: #090b10;
-    --grid: rgba(255, 255, 255, 0.09);
-    --wall: #2c3445;
-    --path: #ffb547;
-    --start: #3ddc97;
-    --end: #ff5d7a;
-    --weight: #7d88a0;
-    --frontier: rgba(160, 180, 255, 0.55);
-    --accent: #7c9cff;
-    --accent-ink: #0b0e18;
-    --dark: 1;
-  }
-  :root[data-theme="light"] {
-    color-scheme: light;
-    --bg: #eef0f5;
-    --panel: rgba(255, 255, 255, 0.78);
-    --panel-solid: #ffffff;
-    --border: rgba(15, 20, 35, 0.08);
-    --text: #141821;
-    --muted: #5d6578;
-    --canvas: #f8f9fc;
-    --grid: rgba(20, 25, 40, 0.14);
-    --wall: #273042;
-    --path: #f08c00;
-    --start: #10a868;
-    --end: #e5345a;
-    --weight: #8a93a8;
-    --frontier: rgba(75, 105, 255, 0.45);
-    --accent: #4b6bff;
-    --accent-ink: #ffffff;
-    --dark: 0;
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      color-scheme: light;
-      --bg: #eef0f5;
-      --panel: rgba(255, 255, 255, 0.78);
-      --panel-solid: #ffffff;
-      --border: rgba(15, 20, 35, 0.08);
-      --text: #141821;
-      --muted: #5d6578;
-      --canvas: #f8f9fc;
-      --grid: rgba(20, 25, 40, 0.14);
-      --wall: #273042;
-      --path: #f08c00;
-      --start: #10a868;
-      --end: #e5345a;
-      --weight: #8a93a8;
-      --frontier: rgba(75, 105, 255, 0.45);
-      --accent: #4b6bff;
-      --accent-ink: #ffffff;
-      --dark: 0;
-    }
-  }
-
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
   body {
-    background: var(--bg);
-    color: var(--text);
-    font: 14px/1.4 Sora, system-ui, -apple-system, "Segoe UI", sans-serif;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    height: 100dvh;
-    overflow: hidden;
-    -webkit-font-smoothing: antialiased;
+    font-family: Arial, Helvetica, sans-serif;
+    max-width: 920px;
+    margin: 20px auto;
+    padding: 0 10px;
+    color: #222;
   }
-
-  /* ---------- Header ---------- */
-  .bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px 20px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
-    backdrop-filter: blur(14px);
-    position: relative;
-    z-index: 2;
-  }
-  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .logo {
-    width: 34px; height: 34px; border-radius: 10px; flex: none;
-    background: conic-gradient(from 210deg, hsl(258 85% 62%), hsl(200 85% 55%), hsl(168 80% 50%), hsl(258 85% 62%));
-    display: grid; place-items: center;
-    box-shadow: 0 6px 20px -6px hsl(230 90% 60% / 0.6);
-  }
-  .logo svg { width: 18px; height: 18px; }
-  h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
-  #desc { margin: 1px 0 0; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .field { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 500; }
-
-  select, .btn, .seg, .icon-btn {
-    height: 34px;
-    border-radius: 9px;
-    border: 1px solid var(--border);
-    background: var(--panel-solid);
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-  }
-  select { padding: 0 30px 0 12px; appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b93a7' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 11px center; }
-
-  .seg { display: inline-flex; padding: 3px; gap: 2px; }
-  .seg button {
-    border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 500;
-    padding: 0 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;
-    transition: background .15s, color .15s;
-  }
-  .seg button[aria-checked="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text); }
-  .seg .sw { width: 9px; height: 9px; border-radius: 2px; }
-
-  .btn { padding: 0 14px; cursor: pointer; transition: transform .08s, background .15s, border-color .15s; }
-  .btn:hover { border-color: color-mix(in srgb, var(--text) 18%, transparent); }
-  .btn:active { transform: scale(0.97); }
-  .btn.primary {
-    background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600;
-    min-width: 104px; box-shadow: 0 6px 18px -8px var(--accent);
-  }
-  .btn.primary.running { background: var(--end); }
-  .icon-btn { width: 34px; display: grid; place-items: center; cursor: pointer; padding: 0; }
-  .icon-btn svg { width: 16px; height: 16px; }
-
-  input[type=range] { width: 92px; accent-color: var(--accent); }
-
-  /* ---------- Stage ---------- */
-  #stage { position: relative; min-height: 0; background: var(--canvas); }
-  canvas { display: block; position: absolute; inset: 0; touch-action: none; cursor: crosshair; }
-  canvas.grab { cursor: grab; }
-  canvas.grabbing { cursor: grabbing; }
-
-  #toast {
-    position: absolute; left: 50%; top: 18px; transform: translate(-50%, -8px);
-    background: var(--panel-solid); border: 1px solid var(--border); color: var(--text);
-    padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500;
-    box-shadow: 0 10px 30px -12px rgba(0,0,0,.5);
-    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
-  }
-  #toast.show { opacity: 1; transform: translate(-50%, 0); }
-
-  /* ---------- Footer ---------- */
-  .foot {
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
-    padding: 10px 20px; border-top: 1px solid var(--border); background: var(--panel); font-size: 12px; color: var(--muted);
-  }
-  .stats { display: flex; gap: 22px; }
-  .stat b { display: block; font: 500 15px "JetBrains Mono", ui-monospace, monospace; color: var(--text); font-variant-numeric: tabular-nums; }
-  .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .chip { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
-  .chip.grad { width: 34px; background: linear-gradient(90deg, hsl(258 85% 55%), hsl(213 85% 55%), hsl(168 80% 50%)); }
-  .chip.dot { border-radius: 50%; }
-  .hint { opacity: .8; }
-  kbd { font: 500 11px "JetBrains Mono", monospace; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-solid); }
-
-  @media (max-width: 720px) {
-    .bar { padding: 12px 16px; }
-    .foot { padding: 10px 16px; }
-    .hint, .legend { display: none; }
-    #desc { white-space: normal; }
-  }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  h2 { font-size: 18px; margin-top: 28px; }
+  .controls { margin: 12px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .controls label { margin-right: 4px; }
+  button, select { font-size: 14px; padding: 3px 8px; }
+  canvas { border: 1px solid #999; width: 100%; display: block; touch-action: none; cursor: pointer; }
+  #info { font-family: monospace; font-size: 14px; }
+  .legend span { display: inline-block; margin-right: 14px; font-size: 13px; }
+  .box { display: inline-block; width: 12px; height: 12px; border: 1px solid #999; vertical-align: middle; margin-right: 4px; }
+  li { margin-bottom: 6px; }
+  .note { color: #666; font-size: 13px; }
 </style>
 </head>
 <body>
-<header class="bar">
-  <div class="brand">
-    <div class="logo" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h5V12h6V6h5"/><circle cx="4" cy="18" r="1.6" fill="#fff"/><circle cx="20" cy="6" r="1.6" fill="#fff"/></svg>
-    </div>
-    <div style="min-width:0">
-      <h1>Pathfinder</h1>
-      <p id="desc"></p>
-    </div>
-  </div>
 
-  <div class="controls">
-    <select id="algo" aria-label="Algorithm">
-      <option value="astar">A* search</option>
-      <option value="dijkstra">Dijkstra</option>
-      <option value="greedy">Greedy best-first</option>
-      <option value="bfs">Breadth-first</option>
-      <option value="dfs">Depth-first</option>
-    </select>
+<h1>Pathfinding Visualizer</h1>
+<p class="note">Draw walls with the mouse, drag the green and red squares to move the start and end, then press Visualize.</p>
 
-    <div class="seg" id="brush" role="radiogroup" aria-label="Brush">
-      <button role="radio" aria-checked="true" data-brush="wall"><i class="sw" style="background:var(--wall)"></i>Wall</button>
-      <button role="radio" aria-checked="false" data-brush="weight"><i class="sw" style="background:var(--weight);transform:rotate(45deg) scale(.8)"></i>Weight</button>
-      <button role="radio" aria-checked="false" data-brush="erase"><i class="sw" style="border:1.5px solid var(--muted)"></i>Erase</button>
-    </div>
+<div class="controls">
+  <label for="algo">Algorithm:</label>
+  <select id="algo">
+    <option value="astar">A*</option>
+    <option value="dijkstra">Dijkstra</option>
+    <option value="greedy">Greedy best-first</option>
+    <option value="bfs">BFS</option>
+    <option value="dfs">DFS</option>
+  </select>
 
-    <label class="field">Speed <input id="speed" type="range" min="1" max="10" value="7"></label>
+  <label for="speed">Speed:</label>
+  <select id="speed">
+    <option value="1">Slow</option>
+    <option value="4" selected>Medium</option>
+    <option value="15">Fast</option>
+  </select>
 
-    <button class="btn" id="maze">Maze</button>
-    <button class="btn" id="scatter">Scatter</button>
-    <button class="btn" id="clear">Clear</button>
-    <button class="btn primary" id="run">Visualize</button>
-    <button class="icon-btn" id="theme" aria-label="Toggle theme">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
-    </button>
-  </div>
-</header>
+  <label for="mode">Draw:</label>
+  <select id="mode">
+    <option value="wall">Walls</option>
+    <option value="weight">Weights</option>
+  </select>
 
-<main id="stage">
-  <canvas id="grid"></canvas>
-  <div id="toast" role="status"></div>
-</main>
+  <button id="run">Visualize</button>
+  <button id="maze">Generate maze</button>
+  <button id="clearPath">Clear path</button>
+  <button id="clearAll">Clear board</button>
+</div>
 
-<footer class="foot">
-  <div class="stats">
-    <div class="stat">Visited<b id="sVisited">0</b></div>
-    <div class="stat">Path length<b id="sLength">–</b></div>
-    <div class="stat">Path cost<b id="sCost">–</b></div>
-  </div>
-  <div class="legend">
-    <span><i class="chip grad"></i>Explored (old → new)</span>
-    <span><i class="chip dot" style="background:var(--frontier)"></i>Frontier</span>
-    <span><i class="chip" style="background:var(--path)"></i>Path</span>
-    <span><i class="chip" style="background:var(--weight);transform:rotate(45deg) scale(.8)"></i>Weight ×5</span>
-  </div>
-  <div class="hint">Drag to draw · drag <span style="color:var(--start)">●</span> <span style="color:var(--end)">◎</span> to move · <kbd>Space</kbd> run · <kbd>M</kbd> maze</div>
-</footer>
+<canvas id="grid"></canvas>
+
+<p id="info">Visited: 0 | Path length: - | Path cost: -</p>
+
+<div class="legend">
+  <span><i class="box" style="background:#2e9e44"></i>Start</span>
+  <span><i class="box" style="background:#d33"></i>End</span>
+  <span><i class="box" style="background:#333"></i>Wall</span>
+  <span><i class="box" style="background:#e3c99a"></i>Weight (cost 5)</span>
+  <span><i class="box" style="background:#cfe3f7"></i>Frontier</span>
+  <span><i class="box" style="background:#8fb8e8"></i>Visited</span>
+  <span><i class="box" style="background:#ffd54f"></i>Path</span>
+</div>
+
+<h2>How the algorithms work</h2>
+<ul>
+  <li><b>BFS (breadth-first search)</b> explores in rings around the start using a queue. It finds the path with the fewest steps but ignores weights.</li>
+  <li><b>DFS (depth-first search)</b> goes as deep as it can down one direction using a stack before backtracking. It does not guarantee the shortest path.</li>
+  <li><b>Dijkstra</b> always expands the cell with the lowest total cost so far (priority queue). It handles weights and always finds the cheapest path.</li>
+  <li><b>A*</b> is Dijkstra plus a heuristic (Manhattan distance to the end), so it searches toward the target. It still finds the cheapest path but visits fewer cells.</li>
+  <li><b>Greedy best-first</b> only uses the heuristic and ignores the cost so far. It is fast but the path is often not the shortest.</li>
+</ul>
+<p class="note">Tip: after a search finishes, moving the start or end, or changing the algorithm, updates the result immediately so you can compare them on the same board.</p>
 
 <script>
-(() => {
-  'use strict';
+const COLS = 45;
+const ROWS = 25;
+const SIZE = 20;
+const WEIGHT_COST = 5;
 
-  // ---------- Config ----------
-  const WEIGHT = 5;
-  const SPEEDS = [0.12, 0.3, 0.6, 1, 2, 3.5, 6, 12, 25, 70]; // search steps per frame
-  const DESCRIPTIONS = {
-    astar:    'A* — weighted, heuristic-guided, always finds the cheapest path',
-    dijkstra: 'Dijkstra — weighted, explores evenly, always finds the cheapest path',
-    greedy:   'Greedy best-first — chases the target, fast but not optimal',
-    bfs:      'Breadth-first — ignores weights, shortest path in steps',
-    dfs:      'Depth-first — ignores weights, wanders, rarely shortest',
-  };
+const COLORS = {
+  empty: '#ffffff',
+  line: '#e2e2e2',
+  wall: '#333333',
+  weight: '#e3c99a',
+  frontier: '#cfe3f7',
+  visited: '#8fb8e8',
+  path: '#ffd54f',
+  start: '#2e9e44',
+  end: '#dd3333'
+};
 
-  // ---------- DOM ----------
-  const $ = s => document.querySelector(s);
-  const canvas = $('#grid'), ctx = canvas.getContext('2d');
-  const stage = $('#stage');
-  const algoSel = $('#algo'), speedIn = $('#speed'), runBtn = $('#run');
-  const ui = { visited: $('#sVisited'), length: $('#sLength'), cost: $('#sCost'), desc: $('#desc'), toast: $('#toast') };
+const canvas = document.getElementById('grid');
+const ctx = canvas.getContext('2d');
+canvas.width = COLS * SIZE;
+canvas.height = ROWS * SIZE;
 
-  // ---------- State ----------
-  let cols = 0, rows = 0, N = 0, cell = 26, ox = 0, oy = 0, W = 0, H = 0, dpr = 1;
-  let walls, weights, wallAt, weightAt, visitAt, visitOrder, frontierAt;
-  let start = 0, end = 0;
-  let path = [], pathAt = 0;
-  let state = 'idle';          // idle | running | done
-  let gen = null, visitedCount = 0, acc = 0;
-  let brush = 'wall', drag = null, hover = -1;
-  let lastGen = null;          // 'maze' | 'scatter' while the board is untouched since generating
-  let theme = {};
+const N = COLS * ROWS;
+let walls = new Uint8Array(N);
+let weights = new Uint8Array(N);
+let status = new Uint8Array(N);   // 0 = nothing, 1 = frontier, 2 = visited
+let path = [];
+let pathShown = 0;
+let visitedCount = 0;
 
-  // ---------- Helpers ----------
-  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
-  const easeOutBack = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * (x - 1) ** 3 + c1 * (x - 1) ** 2; };
-  const easeOutCubic = x => 1 - (1 - x) ** 3;
-  const idx = (x, y) => y * cols + x;
-  const cx = i => ox + (i % cols) * cell + cell / 2;
-  const cy = i => oy + ((i / cols) | 0) * cell + cell / 2;
-  const cost = i => weights[i] ? WEIGHT : 1;
-  const manhattan = (a, b) => Math.abs(a % cols - b % cols) + Math.abs(((a / cols) | 0) - ((b / cols) | 0));
+let start = index(9, 13);
+let end = index(35, 13);
 
-  function neighbors(i) {
-    const x = i % cols, y = (i / cols) | 0, out = [];
-    if (y > 0) out.push(i - cols);
-    if (x < cols - 1) out.push(i + 1);
-    if (y < rows - 1) out.push(i + cols);
-    if (x > 0) out.push(i - 1);
-    return out;
-  }
+let search = null;      // running generator
+let finished = false;
 
-  function trace(prev, s, t) {
-    const p = [];
-    for (let u = t; u !== -1; u = prev[u]) p.push(u);
-    p.reverse();
-    return p[0] === s ? p : null;
-  }
+// ---------- helpers ----------
 
-  class MinHeap {
-    constructor() { this.k = []; this.p = []; }
-    get size() { return this.k.length; }
-    push(key, pri) {
-      const K = this.k, P = this.p;
-      let i = K.length; K.push(key); P.push(pri);
-      while (i > 0) {
-        const j = (i - 1) >> 1;
-        if (P[j] <= pri) break;
-        K[i] = K[j]; P[i] = P[j]; i = j;
-      }
-      K[i] = key; P[i] = pri;
-    }
-    pop() {
-      const K = this.k, P = this.p, top = K[0];
-      const key = K.pop(), pri = P.pop(), n = K.length;
-      if (n) {
-        let i = 0;
-        for (;;) {
-          let c = 2 * i + 1;
-          if (c >= n) break;
-          if (c + 1 < n && P[c + 1] < P[c]) c++;
-          if (P[c] >= pri) break;
-          K[i] = K[c]; P[i] = P[c]; i = c;
-        }
-        K[i] = key; P[i] = pri;
-      }
-      return top;
+function index(x, y) { return y * COLS + x; }
+function getX(i) { return i % COLS; }
+function getY(i) { return Math.floor(i / COLS); }
+function cost(i) { return weights[i] ? WEIGHT_COST : 1; }
+
+function heuristic(a, b) {
+  return Math.abs(getX(a) - getX(b)) + Math.abs(getY(a) - getY(b));
+}
+
+function neighbors(i) {
+  const x = getX(i), y = getY(i);
+  const result = [];
+  if (y > 0) result.push(i - COLS);
+  if (x < COLS - 1) result.push(i + 1);
+  if (y < ROWS - 1) result.push(i + COLS);
+  if (x > 0) result.push(i - 1);
+  return result.filter(n => !walls[n]);
+}
+
+function buildPath(prev, target) {
+  const p = [];
+  for (let cur = target; cur !== -1; cur = prev[cur]) p.push(cur);
+  return p.reverse();
+}
+
+// simple binary heap used by Dijkstra / A* / Greedy
+class PriorityQueue {
+  constructor() { this.items = []; }
+  get size() { return this.items.length; }
+  push(value, priority) {
+    const items = this.items;
+    items.push({ value, priority });
+    let i = items.length - 1;
+    while (i > 0) {
+      const parent = Math.floor((i - 1) / 2);
+      if (items[parent].priority <= items[i].priority) break;
+      [items[parent], items[i]] = [items[i], items[parent]];
+      i = parent;
     }
   }
-
-  // ---------- Algorithms (generators yield ['visit'|'frontier', cell], return path) ----------
-  function* bfs(s, t) {
-    const prev = new Int32Array(N).fill(-1), seen = new Uint8Array(N), q = [s];
-    seen[s] = 1;
-    for (let head = 0; head < q.length; head++) {
-      const u = q[head];
-      yield ['visit', u];
-      if (u === t) return trace(prev, s, t);
-      for (const v of neighbors(u)) {
-        if (seen[v] || walls[v]) continue;
-        seen[v] = 1; prev[v] = u; q.push(v);
-        yield ['frontier', v];
+  pop() {
+    const items = this.items;
+    const top = items[0];
+    const last = items.pop();
+    if (items.length > 0) {
+      items[0] = last;
+      let i = 0;
+      while (true) {
+        let smallest = i;
+        const l = 2 * i + 1, r = 2 * i + 2;
+        if (l < items.length && items[l].priority < items[smallest].priority) smallest = l;
+        if (r < items.length && items[r].priority < items[smallest].priority) smallest = r;
+        if (smallest === i) break;
+        [items[smallest], items[i]] = [items[i], items[smallest]];
+        i = smallest;
       }
     }
-    return null;
+    return top.value;
   }
+}
 
-  function* dfs(s, t) {
-    const prev = new Int32Array(N).fill(-1), seen = new Uint8Array(N), stack = [s];
-    while (stack.length) {
-      const u = stack.pop();
-      if (seen[u]) continue;
-      seen[u] = 1;
-      yield ['visit', u];
-      if (u === t) return trace(prev, s, t);
-      const nb = neighbors(u);
-      for (let k = nb.length - 1; k >= 0; k--) {
-        const v = nb[k];
-        if (seen[v] || walls[v]) continue;
-        prev[v] = u; stack.push(v);
-        yield ['frontier', v];
+// ---------- algorithms ----------
+// Each algorithm is a generator: it yields ['visit', cell] or ['frontier', cell]
+// so the animation can show it one step at a time. It returns the path (or null).
+
+function* bfs() {
+  const prev = new Int32Array(N).fill(-1);
+  const seen = new Uint8Array(N);
+  const queue = [start];
+  seen[start] = 1;
+  let head = 0;
+  while (head < queue.length) {
+    const cur = queue[head++];
+    yield ['visit', cur];
+    if (cur === end) return buildPath(prev, end);
+    for (const n of neighbors(cur)) {
+      if (seen[n]) continue;
+      seen[n] = 1;
+      prev[n] = cur;
+      queue.push(n);
+      yield ['frontier', n];
+    }
+  }
+  return null;
+}
+
+function* dfs() {
+  const prev = new Int32Array(N).fill(-1);
+  const seen = new Uint8Array(N);
+  const stack = [start];
+  while (stack.length > 0) {
+    const cur = stack.pop();
+    if (seen[cur]) continue;
+    seen[cur] = 1;
+    yield ['visit', cur];
+    if (cur === end) return buildPath(prev, end);
+    for (const n of neighbors(cur).reverse()) {
+      if (seen[n]) continue;
+      prev[n] = cur;
+      stack.push(n);
+      yield ['frontier', n];
+    }
+  }
+  return null;
+}
+
+// Dijkstra, A* and Greedy are the same loop, only the priority is different
+function* bestFirst(type) {
+  const dist = new Float64Array(N).fill(Infinity);
+  const prev = new Int32Array(N).fill(-1);
+  const done = new Uint8Array(N);
+  const pq = new PriorityQueue();
+  dist[start] = 0;
+  pq.push(start, 0);
+
+  while (pq.size > 0) {
+    const cur = pq.pop();
+    if (done[cur]) continue;
+    done[cur] = 1;
+    yield ['visit', cur];
+    if (cur === end) return buildPath(prev, end);
+
+    for (const n of neighbors(cur)) {
+      if (done[n]) continue;
+      const newDist = dist[cur] + cost(n);
+      if (newDist < dist[n]) {
+        dist[n] = newDist;
+        prev[n] = cur;
+        let priority;
+        if (type === 'dijkstra') priority = newDist;
+        else if (type === 'astar') priority = newDist + heuristic(n, end);
+        else priority = heuristic(n, end);
+        pq.push(n, priority);
+        yield ['frontier', n];
       }
     }
-    return null;
   }
+  return null;
+}
 
-  // Dijkstra, A* and greedy share one priority-queue search; only the priority differs.
-  function* bestFirst(s, t, mode) {
-    const g = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
-    const closed = new Uint8Array(N), pq = new MinHeap();
-    const priority = (v, gv) =>
-      mode === 'dijkstra' ? gv :
-      mode === 'astar' ? gv + manhattan(v, t) * 1.001 : // slight tie-break toward the goal
-      manhattan(v, t);
-    g[s] = 0; pq.push(s, priority(s, 0));
-    while (pq.size) {
-      const u = pq.pop();
-      if (closed[u]) continue;
-      closed[u] = 1;
-      yield ['visit', u];
-      if (u === t) return trace(prev, s, t);
-      for (const v of neighbors(u)) {
-        if (walls[v] || closed[v]) continue;
-        const ng = g[u] + cost(v);
-        if (ng < g[v]) {
-          g[v] = ng; prev[v] = u;
-          pq.push(v, priority(v, ng));
-          yield ['frontier', v];
-        }
+function makeSearch() {
+  const algo = document.getElementById('algo').value;
+  if (algo === 'bfs') return bfs();
+  if (algo === 'dfs') return dfs();
+  return bestFirst(algo);
+}
+
+// ---------- running ----------
+
+function clearPath() {
+  status = new Uint8Array(N);
+  path = [];
+  pathShown = 0;
+  visitedCount = 0;
+  search = null;
+  finished = false;
+  updateInfo();
+}
+
+function applyStep(step) {
+  const [type, cell] = step;
+  if (type === 'visit') {
+    if (status[cell] !== 2) visitedCount++;
+    status[cell] = 2;
+  } else if (status[cell] === 0) {
+    status[cell] = 1;
+  }
+}
+
+function finish(result) {
+  search = null;
+  finished = true;
+  path = result || [];
+  updateInfo();
+  if (!result) document.getElementById('info').textContent += '  (no path found!)';
+}
+
+function startSearch() {
+  clearPath();
+  search = makeSearch();
+}
+
+// runs the whole search at once (used to update the result live)
+function solveInstantly() {
+  clearPath();
+  const gen = makeSearch();
+  let step = gen.next();
+  while (!step.done) {
+    applyStep(step.value);
+    step = gen.next();
+  }
+  finish(step.value);
+  pathShown = path.length;
+}
+
+function updateInfo() {
+  let text = 'Visited: ' + visitedCount;
+  if (path.length > 0) {
+    let total = 0;
+    for (let k = 1; k < path.length; k++) total += cost(path[k]);
+    text += ' | Path length: ' + (path.length - 1) + ' | Path cost: ' + total;
+  } else {
+    text += ' | Path length: - | Path cost: -';
+  }
+  document.getElementById('info').textContent = text;
+}
+
+// ---------- maze ----------
+// recursive backtracker, then remove some extra walls so there is more than one route
+
+function generateMaze() {
+  clearPath();
+  walls.fill(1);
+  weights.fill(0);
+  const visited = new Uint8Array(N);
+  const stack = [index(1, 1)];
+  walls[index(1, 1)] = 0;
+  visited[index(1, 1)] = 1;
+
+  while (stack.length > 0) {
+    const cur = stack[stack.length - 1];
+    const x = getX(cur), y = getY(cur);
+    const options = [];
+    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+      const nx = x + dx * 2, ny = y + dy * 2;
+      if (nx > 0 && ny > 0 && nx < COLS - 1 && ny < ROWS - 1 && !visited[index(nx, ny)]) {
+        options.push([nx, ny, dx, dy]);
       }
     }
-    return null;
+    if (options.length === 0) { stack.pop(); continue; }
+    const [nx, ny, dx, dy] = options[Math.floor(Math.random() * options.length)];
+    walls[index(x + dx, y + dy)] = 0;
+    walls[index(nx, ny)] = 0;
+    visited[index(nx, ny)] = 1;
+    stack.push(index(nx, ny));
   }
 
-  const ALGOS = {
-    astar: (s, t) => bestFirst(s, t, 'astar'),
-    dijkstra: (s, t) => bestFirst(s, t, 'dijkstra'),
-    greedy: (s, t) => bestFirst(s, t, 'greedy'),
-    bfs, dfs,
-  };
-
-  // ---------- Grid lifecycle ----------
-  function initGrid(c, r) {
-    const old = walls && { cols, rows, walls, weights, wallAt, weightAt };
-    cols = c; rows = r; N = c * r;
-    walls = new Uint8Array(N); weights = new Uint8Array(N);
-    wallAt = new Float64Array(N); weightAt = new Float64Array(N);
-    start = idx(Math.min((Math.floor(c * 0.2)) | 1, c - 2), Math.min((r >> 1) | 1, r - 2));
-    end   = idx(Math.min((Math.floor(c * 0.8)) | 1, c - 2), Math.min((r >> 1) | 1, r - 2));
-    if (old) {                                   // keep whatever fits after a resize
-      for (let y = 0; y < Math.min(r, old.rows); y++)
-        for (let x = 0; x < Math.min(c, old.cols); x++) {
-          const a = idx(x, y), b = y * old.cols + x;
-          if (a === start || a === end) continue;
-          walls[a] = old.walls[b]; weights[a] = old.weights[b];
-          wallAt[a] = old.wallAt[b]; weightAt[a] = old.weightAt[b];
-        }
+  for (let y = 1; y < ROWS - 1; y++) {
+    for (let x = 1; x < COLS - 1; x++) {
+      if (x % 2 !== y % 2 && Math.random() < 0.08) walls[index(x, y)] = 0;
     }
-    resetSearch();
   }
+  walls[start] = 0;
+  walls[end] = 0;
+}
 
-  function resetSearch() {
-    visitAt = new Float64Array(N); visitOrder = new Int32Array(N); frontierAt = new Float64Array(N);
-    path = []; visitedCount = 0; gen = null; acc = 0;
-    setState('idle');
-    updateStats();
-  }
+// ---------- drawing ----------
 
-  function layout() {
-    const r = stage.getBoundingClientRect();
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-    cell = W < 640 ? 20 : 26;
-    let c = Math.max(9, Math.floor((W - 24) / cell));
-    let rr = Math.max(9, Math.floor((H - 24) / cell));
-    if (c % 2 === 0) c--;   // odd dimensions keep the maze generator happy
-    if (rr % 2 === 0) rr--;
-    if (c !== cols || rr !== rows) {
-      initGrid(c, rr);
-      if (lastGen) GENERATORS[lastGen]();   // regenerate rather than crop a pristine board
-    }
-    ox = Math.floor((W - cols * cell) / 2);
-    oy = Math.floor((H - rows * cell) / 2);
-  }
+function draw() {
+  for (let i = 0; i < N; i++) {
+    let color = COLORS.empty;
+    if (walls[i]) color = COLORS.wall;
+    else if (status[i] === 2) color = COLORS.visited;
+    else if (status[i] === 1) color = COLORS.frontier;
+    else if (weights[i]) color = COLORS.weight;
+    ctx.fillStyle = color;
+    ctx.fillRect(getX(i) * SIZE, getY(i) * SIZE, SIZE, SIZE);
 
-  function readTheme() {
-    const cs = getComputedStyle(document.documentElement), v = k => cs.getPropertyValue(k).trim();
-    theme = {
-      canvas: v('--canvas'), grid: v('--grid'), wall: v('--wall'), path: v('--path'),
-      start: v('--start'), end: v('--end'), weight: v('--weight'), frontier: v('--frontier'),
-      dark: v('--dark') === '1',
-    };
-  }
-
-  // ---------- Search control ----------
-  function setState(s) {
-    state = s;
-    runBtn.textContent = s === 'running' ? 'Stop' : s === 'done' ? 'Replay' : 'Visualize';
-    runBtn.classList.toggle('running', s === 'running');
-  }
-
-  function run() {
-    if (state === 'running') { setState('idle'); gen = null; return; }
-    resetSearch();
-    gen = ALGOS[algoSel.value](start, end);
-    setState('running');
-  }
-
-  function advance(now) {
-    for (;;) {
-      const r = gen.next();
-      if (r.done) return finish(r.value, now, false);
-      const [type, i] = r.value;
-      if (type === 'visit') {
-        if (!visitAt[i]) { visitAt[i] = now; visitOrder[i] = visitedCount++; }
-        return;
-      }
-      if (!frontierAt[i]) frontierAt[i] = now;
+    // weights that were already searched get a small mark so you can still see them
+    if (weights[i] && status[i] && !walls[i]) {
+      ctx.fillStyle = COLORS.weight;
+      ctx.fillRect(getX(i) * SIZE + 6, getY(i) * SIZE + 6, SIZE - 12, SIZE - 12);
     }
   }
 
-  // Run the whole search synchronously, so edits after a finished run update live.
-  function solveInstant() {
-    resetSearch();
-    const g = ALGOS[algoSel.value](start, end);
-    let r;
-    while (!(r = g.next()).done) {
-      const [type, i] = r.value;
-      if (type === 'visit') { if (!visitAt[i]) { visitAt[i] = 1; visitOrder[i] = visitedCount++; } }
-      else if (!frontierAt[i]) frontierAt[i] = 1;
+  for (let k = 0; k < pathShown; k++) {
+    ctx.fillStyle = COLORS.path;
+    ctx.fillRect(getX(path[k]) * SIZE, getY(path[k]) * SIZE, SIZE, SIZE);
+  }
+
+  ctx.fillStyle = COLORS.start;
+  ctx.fillRect(getX(start) * SIZE, getY(start) * SIZE, SIZE, SIZE);
+  ctx.fillStyle = COLORS.end;
+  ctx.fillRect(getX(end) * SIZE, getY(end) * SIZE, SIZE, SIZE);
+
+  // grid lines
+  ctx.strokeStyle = COLORS.line;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x <= COLS; x++) {
+    ctx.moveTo(x * SIZE + 0.5, 0);
+    ctx.lineTo(x * SIZE + 0.5, ROWS * SIZE);
+  }
+  for (let y = 0; y <= ROWS; y++) {
+    ctx.moveTo(0, y * SIZE + 0.5);
+    ctx.lineTo(COLS * SIZE, y * SIZE + 0.5);
+  }
+  ctx.stroke();
+}
+
+function loop() {
+  if (search) {
+    const steps = Number(document.getElementById('speed').value);
+    let visits = 0;
+    while (visits < steps && search) {
+      const step = search.next();
+      if (step.done) { finish(step.value); break; }
+      applyStep(step.value);
+      if (step.value[0] === 'visit') visits++;
     }
-    finish(r.value, 0, true);
+    updateInfo();
+  } else if (finished && pathShown < path.length) {
+    pathShown++;
   }
+  draw();
+  requestAnimationFrame(loop);
+}
 
-  function finish(p, now, instant) {
-    gen = null;
-    path = p || [];
-    pathAt = instant ? -1e9 : now + 120;
-    setState('done');
-    updateStats();
-    if (!p && !instant) toast('No path — the target is walled off');
+// ---------- mouse ----------
+
+let dragging = null;   // 'start', 'end', 'draw' or 'erase'
+
+function cellFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / rect.width * COLS);
+  const y = Math.floor((e.clientY - rect.top) / rect.height * ROWS);
+  if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return -1;
+  return index(x, y);
+}
+
+function paint(cell) {
+  if (cell === start || cell === end) return;
+  const mode = document.getElementById('mode').value;
+  const value = dragging === 'draw' ? 1 : 0;
+  if (mode === 'wall') {
+    walls[cell] = value;
+    if (value) weights[cell] = 0;
+  } else if (!walls[cell]) {
+    weights[cell] = value;
   }
+}
 
-  function updateStats() {
-    ui.visited.textContent = visitedCount.toLocaleString();
-    if (path.length) {
-      ui.length.textContent = path.length - 1;
-      let c = 0;
-      for (let k = 1; k < path.length; k++) c += cost(path[k]);
-      ui.cost.textContent = c;
-    } else {
-      ui.length.textContent = ui.cost.textContent = state === 'done' ? '∅' : '–';
-    }
+function boardChanged() {
+  if (finished) solveInstantly();
+  else clearPath();
+}
+
+canvas.addEventListener('pointerdown', e => {
+  const cell = cellFromEvent(e);
+  if (cell < 0) return;
+  canvas.setPointerCapture(e.pointerId);
+  search = null;
+  if (cell === start) dragging = 'start';
+  else if (cell === end) dragging = 'end';
+  else {
+    const mode = document.getElementById('mode').value;
+    const current = mode === 'wall' ? walls[cell] : weights[cell];
+    dragging = current ? 'erase' : 'draw';
+    paint(cell);
+    boardChanged();
   }
+});
 
-  let toastTimer = 0;
-  function toast(msg) {
-    ui.toast.textContent = msg;
-    ui.toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2200);
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const cell = cellFromEvent(e);
+  if (cell < 0) return;
+  if (dragging === 'start' || dragging === 'end') {
+    if (walls[cell] || cell === start || cell === end) return;
+    if (dragging === 'start') start = cell;
+    else end = cell;
+  } else {
+    paint(cell);
   }
+  boardChanged();
+});
 
-  // After any board edit: refresh a finished result live, or drop a stale partial one.
-  function afterEdit() {
-    if (state === 'done') solveInstant();
-    else if (visitedCount) resetSearch();
-  }
+canvas.addEventListener('pointerup', () => { dragging = null; });
+canvas.addEventListener('pointercancel', () => { dragging = null; });
 
-  // ---------- Generators ----------
-  function generateMaze() {
-    lastGen = 'maze';
-    resetSearch();
-    const now = performance.now();
-    walls.fill(1); weights.fill(0);
-    const seen = new Uint8Array(N), stack = [idx(1, 1)];
-    walls[stack[0]] = 0; seen[stack[0]] = 1;
-    const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-    while (stack.length) {
-      const u = stack[stack.length - 1], x = u % cols, y = (u / cols) | 0, opts = [];
-      for (const [dx, dy] of DIRS) {
-        const nx = x + dx * 2, ny = y + dy * 2;
-        if (nx > 0 && ny > 0 && nx < cols - 1 && ny < rows - 1 && !seen[idx(nx, ny)]) opts.push([nx, ny, dx, dy]);
-      }
-      if (!opts.length) { stack.pop(); continue; }
-      const [nx, ny, dx, dy] = opts[(Math.random() * opts.length) | 0];
-      walls[idx(x + dx, y + dy)] = 0; walls[idx(nx, ny)] = 0;
-      seen[idx(nx, ny)] = 1; stack.push(idx(nx, ny));
-    }
-    // Knock out a few inner walls so there are loops — otherwise every algorithm finds the same path.
-    for (let y = 1; y < rows - 1; y++)
-      for (let x = 1; x < cols - 1; x++)
-        if ((x & 1) !== (y & 1) && walls[idx(x, y)] && Math.random() < 0.08) walls[idx(x, y)] = 0;
-    // Snap markers onto open maze cells.
-    const snap = i => idx(Math.min((i % cols) | 1, cols - 2), Math.min(((i / cols) | 0) | 1, rows - 2));
-    start = snap(start); end = snap(end);
-    if (end === start) end = idx(cols - 2, rows - 2);
-    // Walls sweep in diagonally.
-    for (let i = 0; i < N; i++) if (walls[i]) wallAt[i] = now + ((i % cols) + ((i / cols) | 0)) * 7;
-  }
+// ---------- buttons ----------
 
-  function generateScatter() {
-    lastGen = 'scatter';
-    resetSearch();
-    const now = performance.now();
-    walls.fill(0); weights.fill(0);
-    for (let i = 0; i < N; i++) {
-      if (i === start || i === end) continue;
-      const r = Math.random();
-      if (r < 0.24) { walls[i] = 1; wallAt[i] = now + Math.random() * 450; }
-      else if (r < 0.36) { weights[i] = 1; weightAt[i] = now + Math.random() * 450; }
-    }
-  }
+document.getElementById('run').addEventListener('click', startSearch);
+document.getElementById('clearPath').addEventListener('click', clearPath);
+document.getElementById('clearAll').addEventListener('click', () => {
+  walls.fill(0);
+  weights.fill(0);
+  clearPath();
+});
+document.getElementById('maze').addEventListener('click', generateMaze);
+document.getElementById('algo').addEventListener('change', () => {
+  if (finished) solveInstantly();
+});
 
-  const GENERATORS = { maze: generateMaze, scatter: generateScatter };
-
-  function clearBoard() {
-    lastGen = null;
-    walls.fill(0); weights.fill(0);
-    resetSearch();
-  }
-
-  // ---------- Drawing ----------
-  function rrect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, Math.max(0, Math.min(r, w / 2, h / 2)));
-    ctx.fill();
-  }
-
-  function visitColor(order, total, flash) {
-    const t = total > 1 ? order / (total - 1) : 1;
-    const hue = 258 - t * 90;                      // violet → teal as the search spreads
-    const sat = theme.dark ? 82 : 78;
-    const light = (theme.dark ? 40 + t * 16 : 72 - t * 14) + flash * (theme.dark ? 30 : 14);
-    return `hsl(${hue} ${sat}% ${Math.min(light, 90)}%)`;
-  }
-
-  function drawMarker(i, color, kind, now) {
-    const x = cx(i), y = cy(i), active = drag && drag.kind === kind;
-    const R = cell * (active ? 0.42 : 0.36);
-    const pulse = (now % 1800) / 1800;
-    ctx.save();
-    ctx.strokeStyle = color; ctx.globalAlpha = (1 - pulse) * 0.55; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x, y, R + pulse * cell * 0.6, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.shadowColor = color; ctx.shadowBlur = theme.dark ? 16 : 6;
-    if (kind === 'start') {
-      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0; ctx.fillStyle = theme.canvas;
-      ctx.beginPath();                              // small play-triangle
-      ctx.moveTo(x - R * 0.28, y - R * 0.42); ctx.lineTo(x + R * 0.48, y); ctx.lineTo(x - R * 0.28, y + R * 0.42);
-      ctx.closePath(); ctx.fill();
-    } else {
-      ctx.strokeStyle = color; ctx.lineWidth = Math.max(2.5, cell * 0.11);
-      ctx.beginPath(); ctx.arc(x, y, R * 0.86, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, R * 0.34, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function draw(now) {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = theme.canvas;
-    ctx.fillRect(0, 0, W, H);
-
-    // dotted grid
-    ctx.fillStyle = theme.grid;
-    for (let y = 0; y <= rows; y++)
-      for (let x = 0; x <= cols; x++)
-        ctx.fillRect(ox + x * cell - 1, oy + y * cell - 1, 2, 2);
-
-    const gap = 1.5, full = cell - gap * 2, total = visitedCount;
-
-    for (let i = 0; i < N; i++) {
-      const x = ox + (i % cols) * cell, y = oy + ((i / cols) | 0) * cell;
-
-      if (walls[i]) {
-        const p = clamp01((now - wallAt[i]) / 280);
-        if (p <= 0) continue;
-        const s = full * easeOutBack(p);
-        ctx.fillStyle = theme.wall;
-        rrect(x + cell / 2 - s / 2, y + cell / 2 - s / 2, s, s, 3 + (1 - p) * s / 2);
-        continue;
-      }
-
-      if (visitAt[i]) {
-        const p = clamp01((now - visitAt[i]) / 650);
-        const s = full * (0.2 + 0.8 * easeOutBack(p));
-        ctx.fillStyle = visitColor(visitOrder[i], total, 1 - easeOutCubic(p));
-        rrect(x + cell / 2 - s / 2, y + cell / 2 - s / 2, s, s, (s / 2) * (1 - p) + 4 * p);
-      } else if (frontierAt[i]) {
-        const p = clamp01((now - frontierAt[i]) / 300);
-        ctx.fillStyle = theme.frontier;
-        ctx.beginPath(); ctx.arc(x + cell / 2, y + cell / 2, cell * 0.16 * easeOutBack(p), 0, Math.PI * 2); ctx.fill();
-      }
-
-      if (weights[i]) {
-        const p = clamp01((now - weightAt[i]) / 300);
-        if (p <= 0) continue;
-        const s = cell * 0.2 * easeOutBack(p);
-        ctx.fillStyle = visitAt[i] ? (theme.dark ? 'rgba(255,255,255,.6)' : 'rgba(255,255,255,.85)') : theme.weight;
-        ctx.beginPath();
-        ctx.moveTo(x + cell / 2, y + cell / 2 - s); ctx.lineTo(x + cell / 2 + s, y + cell / 2);
-        ctx.lineTo(x + cell / 2, y + cell / 2 + s); ctx.lineTo(x + cell / 2 - s, y + cell / 2);
-        ctx.closePath(); ctx.fill();
-      }
-    }
-
-    // path, drawn progressively with a glow
-    if (path.length > 1) {
-      const n = Math.min(path.length - 1, Math.max(0, (now - pathAt) / 28));
-      if (n > 0) {
-        const whole = Math.floor(n), f = n - whole;
-        ctx.save();
-        ctx.lineCap = ctx.lineJoin = 'round';
-        ctx.strokeStyle = theme.path; ctx.lineWidth = cell * 0.3;
-        ctx.shadowColor = theme.path; ctx.shadowBlur = theme.dark ? 18 : 8;
-        ctx.beginPath(); ctx.moveTo(cx(path[0]), cy(path[0]));
-        for (let k = 1; k <= whole; k++) ctx.lineTo(cx(path[k]), cy(path[k]));
-        let hx = cx(path[whole]), hy = cy(path[whole]);
-        if (whole < path.length - 1) {
-          hx += (cx(path[whole + 1]) - hx) * f; hy += (cy(path[whole + 1]) - hy) * f;
-          ctx.lineTo(hx, hy);
-        }
-        ctx.stroke();
-        if (n < path.length - 1) {        // bright head while drawing
-          ctx.fillStyle = '#fff'; ctx.shadowBlur = 20;
-          ctx.beginPath(); ctx.arc(hx, hy, cell * 0.12, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.restore();
-      }
-    }
-
-    // hover outline
-    if (hover >= 0 && !drag && hover !== start && hover !== end) {
-      ctx.strokeStyle = theme.grid; ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(ox + (hover % cols) * cell + gap, oy + ((hover / cols) | 0) * cell + gap, full, full, 4);
-      ctx.stroke();
-    }
-
-    drawMarker(end, theme.end, 'end', now);
-    drawMarker(start, theme.start, 'start', now);
-  }
-
-  let lastVisited = -1;
-  function frame(now) {
-    if (state === 'running') {
-      acc += SPEEDS[speedIn.value - 1];
-      while (acc >= 1 && state === 'running') { acc--; advance(now); }
-      if (visitedCount !== lastVisited) { lastVisited = visitedCount; updateStats(); }
-    }
-    draw(now);
-    requestAnimationFrame(frame);
-  }
-
-  // ---------- Pointer input ----------
-  function cellAt(e) {
-    const r = canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - r.left - ox) / cell), y = Math.floor((e.clientY - r.top - oy) / cell);
-    return x >= 0 && y >= 0 && x < cols && y < rows ? idx(x, y) : -1;
-  }
-
-  function cellsBetween(a, b) {               // Bresenham, so fast strokes leave no gaps
-    let x0 = a % cols, y0 = (a / cols) | 0;
-    const x1 = b % cols, y1 = (b / cols) | 0;
-    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-    let err = dx + dy;
-    const out = [];
-    for (;;) {
-      out.push(idx(x0, y0));
-      if (x0 === x1 && y0 === y1) return out;
-      const e2 = 2 * err;
-      if (e2 >= dy) { err += dy; x0 += sx; }
-      if (e2 <= dx) { err += dx; y0 += sy; }
-    }
-  }
-
-  function paint(i, now) {
-    if (i === start || i === end) return false;
-    lastGen = null;
-    if (drag.brush === 'wall') {
-      if (walls[i] === drag.value) return false;
-      walls[i] = drag.value; weights[i] = 0; wallAt[i] = now;
-    } else if (drag.brush === 'weight') {
-      if (walls[i] || weights[i] === drag.value) return false;
-      weights[i] = drag.value; weightAt[i] = now;
-    } else {
-      if (!walls[i] && !weights[i]) return false;
-      walls[i] = 0; weights[i] = 0;
-    }
-    return true;
-  }
-
-  canvas.addEventListener('pointerdown', e => {
-    const i = cellAt(e);
-    if (i < 0) return;
-    if (state === 'running') { setState('idle'); gen = null; }
-    canvas.setPointerCapture(e.pointerId);
-    if (i === start) drag = { kind: 'start' };
-    else if (i === end) drag = { kind: 'end' };
-    else {
-      const arr = brush === 'weight' ? weights : walls;
-      drag = { kind: 'paint', brush, value: brush === 'erase' ? 0 : arr[i] ? 0 : 1, last: i };
-      if (paint(i, performance.now())) afterEdit();
-    }
-    canvas.className = drag.kind === 'paint' ? '' : 'grabbing';
-  });
-
-  canvas.addEventListener('pointermove', e => {
-    const i = cellAt(e);
-    hover = i;
-    if (!drag) { canvas.className = i === start || i === end ? 'grab' : ''; return; }
-    if (i < 0) return;
-    if (drag.kind === 'paint') {
-      if (i === drag.last) return;
-      const now = performance.now();
-      let changed = false;
-      for (const c of cellsBetween(drag.last, i)) changed = paint(c, now) || changed;
-      drag.last = i;
-      if (changed) afterEdit();
-    } else if (!walls[i] && i !== start && i !== end) {
-      if (drag.kind === 'start') start = i; else end = i;
-      afterEdit();
-    }
-  });
-
-  const endDrag = () => { drag = null; canvas.className = ''; };
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', endDrag);
-  canvas.addEventListener('pointerleave', () => { hover = -1; });
-
-  // ---------- Controls ----------
-  runBtn.addEventListener('click', run);
-  $('#maze').addEventListener('click', generateMaze);
-  $('#scatter').addEventListener('click', generateScatter);
-  $('#clear').addEventListener('click', clearBoard);
-
-  algoSel.addEventListener('change', () => {
-    ui.desc.textContent = DESCRIPTIONS[algoSel.value];
-    if (state === 'done') solveInstant();      // compare algorithms instantly on the same board
-    else if (state === 'running') run(), run();
-  });
-
-  $('#brush').addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    brush = b.dataset.brush;
-    for (const x of $('#brush').children) x.setAttribute('aria-checked', String(x === b));
-  });
-
-  $('#theme').addEventListener('click', () => {
-    const root = document.documentElement;
-    root.dataset.theme = theme.dark ? 'light' : 'dark';
-    readTheme();
-  });
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
-
-  window.addEventListener('keydown', e => {
-    if (e.target.closest('select, input')) return;
-    const k = e.key.toLowerCase();
-    if (k === ' ') { e.preventDefault(); run(); }
-    else if (k === 'm') generateMaze();
-    else if (k === 's') generateScatter();
-    else if (k === 'c') clearBoard();
-  });
-
-  new ResizeObserver(layout).observe(stage);
-
-  // ---------- Boot ----------
-  ui.desc.textContent = DESCRIPTIONS[algoSel.value];
-  readTheme();
-  layout();
-  requestAnimationFrame(frame);
-  // Fonts change the header height, so build the first maze once layout has settled.
-  document.fonts.ready.then(() => requestAnimationFrame(() => { layout(); generateMaze(); }));
-})();
+generateMaze();
+loop();
 </script>
 </body>
 </html>
